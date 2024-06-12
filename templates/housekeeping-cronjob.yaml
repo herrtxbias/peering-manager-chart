@@ -1,0 +1,148 @@
+{{- if .Values.housekeeping.enabled -}}
+{{- if semverCompare ">=1.21-0" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: batch/v1
+{{- else -}}
+apiVersion: batch/v1beta1
+{{- end }}
+kind: CronJob
+metadata:
+  name: {{ include "peering-manager.fullname" . }}-housekeeping
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "peering-manager.labels" . | nindent 4 }}
+    app.kubernetes.io/component: housekeeping
+spec:
+  concurrencyPolicy: {{ .Values.housekeeping.concurrencyPolicy }}
+  failedJobsHistoryLimit: {{ .Values.housekeeping.failedJobsHistoryLimit }}
+  schedule: {{ .Values.housekeeping.schedule | quote }}
+  successfulJobsHistoryLimit: {{ .Values.housekeeping.successfulJobsHistoryLimit }}
+  suspend: {{ .Values.housekeeping.suspend }}
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "peering-manager.labels" . | nindent 8 }}
+    spec:
+      template:
+        metadata:
+          {{- with .Values.housekeeping.podAnnotations }}
+          annotations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          labels:
+            {{- include "peering-manager.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: housekeeping
+            {{- with .Values.housekeeping.podLabels }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+        spec:
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          serviceAccountName: {{ include "peering-manager.serviceAccountName" . }}
+          securityContext:
+            {{- toYaml .Values.housekeeping.podSecurityContext | nindent 12 }}
+          {{- with .Values.housekeeping.extraInitContainers }}
+          initContainers:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: {{ .Chart.Name }}-housekeeping
+              securityContext:
+                {{- toYaml .Values.housekeeping.securityContext | nindent 16 }}
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              command:
+                - /opt/peering-manager/venv/bin/python
+                - /opt/peering-manager/manage.py
+                - housekeeping
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              {{- with .Values.housekeeping.extraEnvs }}
+              env:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/peering-manager/config/configuration.py
+                  subPath: configuration.py
+                  readOnly: true
+                - name: config
+                  mountPath: /run/config/peering-manager
+                  readOnly: true
+                - name: secrets
+                  mountPath: /run/secrets/peering-manager
+                  readOnly: true
+                {{- include "peering-manager.extraConfig.volumeMounts" . | nindent 16 -}}
+                - name: peering-manager-tmp
+                  mountPath: /tmp
+                {{- with .Values.housekeeping.extraVolumeMounts }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+              {{- if .Values.housekeeping.resources }}
+              resources:
+                {{- toYaml .Values.housekeeping.resources | nindent 16 }}
+              {{- end }}
+            {{- with .Values.housekeeping.extraContainers }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumes:
+            - name: config
+              configMap:
+                name: {{ include "peering-manager.fullname" . }}
+            - name: secrets
+              projected:
+                sources:
+                  - secret:
+                      name: {{ .Values.existingSecret | default (include "peering-manager.fullname" .) | quote }}
+                      items:
+                        # Used by our configuration
+                        - key: email_password
+                          path: email_password
+                        - key: napalm_password
+                          path: napalm_password
+                        - key: netbox_api_token
+                          path: netbox_api_token
+                        - key: peeringdb_api_key
+                          path: peeringdb_api_key
+                        - key: peeringdb_password
+                          path: peeringdb_password
+                        - key: secret_key
+                          path: secret_key
+                  - secret:
+                      name: {{ include "peering-manager.postgresql.secret" . | quote }}
+                      items:
+                        - key: {{ include "peering-manager.postgresql.secretKey" . | quote }}
+                          path: db_password
+                  - secret:
+                      name: {{ include "peering-manager.tasksRedis.secret" . | quote }}
+                      items:
+                        - key: {{ include "peering-manager.tasksRedis.secretKey" . | quote }}
+                          path: redis_tasks_password
+                  - secret:
+                      name: {{ include "peering-manager.cachingRedis.secret" . | quote }}
+                      items:
+                        - key: {{ include "peering-manager.cachingRedis.secretKey" . | quote }}
+                          path: redis_cache_password
+            {{- include "peering-manager.extraConfig.volumes" . | nindent 12 -}}
+            - name: peering-manager-tmp
+              emptyDir:
+                medium: Memory
+            {{- with .Values.housekeeping.extraVolumes }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.housekeeping.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.housekeeping.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.housekeeping.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          restartPolicy: {{ .Values.housekeeping.restartPolicy }}
+{{- end -}}
