@@ -336,11 +336,17 @@ externalDatabase:
   existingSecretName: ""
   existingSecretKey: postgresql-password
 
-  # The following settings also apply when using the bundled PostgreSQL chart:
-  sslMode: prefer
   connMaxAge: 300
   disableServerSideCursors: false
   targetSessionAttrs: read-write
+
+  # SSL Config
+  sslMode: prefer
+  sslCert: ""
+  sslKey: ""
+  sslPassword: ""
+  sslCertMode: allow
+  sslRootCert: ""
 
 redis:
   ## Deploy Redis using bundled chart
