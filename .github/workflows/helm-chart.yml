@@ -1,0 +1,15 @@
+name: Helm Chart
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    uses: herrtxbias/actions/.github/workflows/build-helm-chart.yml@main
+    with:
+      repo-url: https://repo.herrtxbias.me/repository/charts/
+      chart-path: .
+    secrets:
+      REPOSITORY_USER: ${{ secrets.REPOSITORY_USER }}
+      REPOSITORY_PASSWORD: ${{ secrets.REPOSITORY_PASSWORD }}
