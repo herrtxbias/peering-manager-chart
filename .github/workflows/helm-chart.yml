@@ -18,6 +18,7 @@ jobs:
       
       - name: Package Helm Chart
         run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
           helm dependency build
           helm package .
       
