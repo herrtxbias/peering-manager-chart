@@ -18,6 +18,7 @@ jobs:
       
       - name: Package Helm Chart
         run: |
+          helm dependency build
           helm package .
       
       - name: Push Helm Chart
