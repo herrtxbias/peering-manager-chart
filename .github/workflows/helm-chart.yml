@@ -1,15 +1,25 @@
-name: Helm Chart
+name: Build Helm Chart
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   build:
-    uses: herrtxbias/actions/.github/workflows/build-helm-chart.yml@main
-    with:
-      repo-url: https://repo.herrtxbias.me/repository/charts/
-      chart-path: .
-    secrets:
-      REPOSITORY_USER: ${{ secrets.REPOSITORY_USER }}
-      REPOSITORY_PASSWORD: ${{ secrets.REPOSITORY_PASSWORD }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+      
+      - name: Package Helm Chart
+        run: |
+          helm package .
+      
+      - name: Push Helm Chart
+        run: |
+          curl -u ${{ secrets.REPOSITORY_USER }}:${{ secrets.REPOSITORY_PASSWORD }} https://charts.repo.herrtxbias.me --upload-file *.tgz -v
