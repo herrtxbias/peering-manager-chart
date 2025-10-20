@@ -24,4 +24,4 @@ jobs:
       
       - name: Push Helm Chart
         run: |
-          curl -u ${{ secrets.REPOSITORY_USER }}:${{ secrets.REPOSITORY_PASSWORD }} https://charts.repo.herrtxbias.me --upload-file *.tgz -v
+          curl -u ${{ secrets.REPOSITORY_USER }}:${{ secrets.REPOSITORY_PASSWORD }} https://charts.repo.herrtxbias.net --upload-file *.tgz -v
